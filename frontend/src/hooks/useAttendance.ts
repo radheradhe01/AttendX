@@ -10,7 +10,8 @@ export function useAttendanceHistory(params?: {
 }) {
   return useQuery({
     queryKey: ["attendance", "history", params],
-    queryFn: () => attendanceApi.getHistory(params),
+    queryFn: () => attendanceApi.getAttendanceHistory(params),
+    enabled: !!(params?.studentId || params?.courseId),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
@@ -21,27 +22,30 @@ export function useAttendanceStats(params?: {
 }) {
   return useQuery({
     queryKey: ["attendance", "stats", params],
-    queryFn: () => attendanceApi.getStats(params),
+    queryFn: () => attendanceApi.getAttendanceStats(params),
+    enabled: !!(params?.studentId || params?.courseId),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 
-export function useStudentAttendance(params?: {
+export function useStudentAttendance(studentId: string, params?: {
   courseId?: string
   startDate?: string
   endDate?: string
 }) {
   return useQuery({
-    queryKey: ["student", "attendance", params],
-    queryFn: () => studentApi.getAttendance(params),
+    queryKey: ["student", "attendance", studentId, params],
+    queryFn: () => studentApi.getAttendance(studentId, params),
+    enabled: !!studentId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 
-export function useStudentAttendanceStats() {
+export function useStudentAttendanceStats(studentId: string) {
   return useQuery({
-    queryKey: ["student", "attendance", "stats"],
-    queryFn: () => studentApi.getAttendanceStats(),
+    queryKey: ["student", "attendance", "stats", studentId],
+    queryFn: () => studentApi.getAttendanceStats(studentId),
+    enabled: !!studentId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }

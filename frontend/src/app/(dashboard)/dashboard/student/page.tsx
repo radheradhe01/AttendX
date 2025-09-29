@@ -9,35 +9,68 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  User2
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { studentApi } from "@/lib/api"
-import { useStudentAttendanceStats, useStudentAttendance } from "@/hooks/useAttendance"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { studentApi, authApi } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 import { FadeIn, StaggerContainer } from "@/components/animations"
 import { PageLoader, Skeleton } from "@/components/common/Loader"
 import { formatDate } from "@/lib/utils"
 
 export default function StudentDashboard() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+
+  // Get user profile first to get the student ID
+  const { data: userProfile, isLoading: userLoading } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: () => authApi.me(),
+    enabled: isAuthenticated,
+  })
+
+  const studentId = userProfile?.data?.profile?.id
+
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["student", "profile"],
-    queryFn: () => studentApi.getProfile(),
+    queryKey: ["student", "profile", studentId],
+    queryFn: () => studentApi.getProfile(studentId || ""),
+    enabled: !!studentId,
   })
 
   const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ["student", "courses"],
-    queryFn: () => studentApi.getCourses(),
+    queryKey: ["student", "courses", studentId],
+    queryFn: () => studentApi.getCourses(studentId || ""),
+    enabled: !!studentId,
   })
 
-  const { data: attendanceStats, isLoading: statsLoading } = useStudentAttendanceStats()
-  const { data: recentAttendance, isLoading: attendanceLoading } = useStudentAttendance({
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  const { data: attendanceHistory, isLoading: attendanceLoading } = useQuery({
+    queryKey: ["student", "attendance", studentId],
+    queryFn: () => studentApi.getAttendance(studentId || ""),
+    enabled: !!studentId,
   })
 
-  if (profileLoading || coursesLoading || statsLoading) {
+  if (authLoading || userLoading || profileLoading || coursesLoading || attendanceLoading) {
     return <PageLoader message="Loading dashboard..." />
+  }
+
+  if (!isAuthenticated || user?.role !== "student") {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-150px)]">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>You do not have permission to view this page.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.href = "/auth/login"}>Go to Login</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const getStatusIcon = (status: string) => {
@@ -90,16 +123,20 @@ export default function StudentDashboard() {
         <FadeIn delay={0.1}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Profile</CardTitle>
+              <User2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {attendanceStats?.data?.totalClasses || 0}
+              <div className="flex items-center space-x-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={profile?.data?.avatar || "/avatars/01.png"} alt={profile?.data?.firstName} />
+                  <AvatarFallback>{profile?.data?.firstName?.charAt(0)}{profile?.data?.lastName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-lg font-bold">{profile?.data?.firstName} {profile?.data?.lastName}</div>
+                  <p className="text-xs text-muted-foreground">{profile?.data?.email}</p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                This semester
-              </p>
             </CardContent>
           </Card>
         </FadeIn>
@@ -107,38 +144,27 @@ export default function StudentDashboard() {
         <FadeIn delay={0.2}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Present Classes</CardTitle>
+              <CardTitle className="text-sm font-medium">Recent Attendance</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {attendanceStats?.data?.presentClasses || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                This semester
-              </p>
+              {attendanceHistory?.data && attendanceHistory.data.length > 0 ? (
+                <>
+                  <div className="text-2xl font-bold">
+                    {attendanceHistory.data[0].status === "present" ? "Present" : "Absent"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Last updated: {formatDate(attendanceHistory.data[0].date)}
+                  </p>
+                </>
+              ) : (
+                <div className="text-muted-foreground">No recent attendance.</div>
+              )}
             </CardContent>
           </Card>
         </FadeIn>
 
         <FadeIn delay={0.3}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {attendanceStats?.data?.attendancePercentage?.toFixed(1) || 0}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Overall performance
-              </p>
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <FadeIn delay={0.4}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Enrolled Courses</CardTitle>
@@ -154,6 +180,23 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         </FadeIn>
+
+        <FadeIn delay={0.4}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Department</CardTitle>
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {profile?.data?.department || "N/A"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Year {profile?.data?.year || "N/A"}
+              </p>
+            </CardContent>
+          </Card>
+        </FadeIn>
       </StaggerContainer>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -163,7 +206,7 @@ export default function StudentDashboard() {
             <CardHeader>
               <CardTitle>Recent Attendance</CardTitle>
               <CardDescription>
-                Your attendance for the last 7 days
+                Your attendance history
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -173,7 +216,7 @@ export default function StudentDashboard() {
                     <Skeleton key={i} className="h-4 w-full" />
                   ))}
                 </div>
-              ) : recentAttendance?.data?.length ? (
+              ) : attendanceHistory?.data?.length ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -183,12 +226,12 @@ export default function StudentDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentAttendance.data.slice(0, 5).map((attendance) => (
+                    {attendanceHistory.data.slice(0, 5).map((attendance: any) => (
                       <TableRow key={attendance.id}>
                         <TableCell className="font-medium">
                           {formatDate(attendance.date)}
                         </TableCell>
-                        <TableCell>{attendance.course?.name}</TableCell>
+                        <TableCell>{attendance.courseId}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             {getStatusIcon(attendance.status)}
@@ -229,12 +272,12 @@ export default function StudentDashboard() {
                   {courses.data.map((course) => (
                     <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <h4 className="font-medium">{course.name}</h4>
+                        <h4 className="font-medium">{course.courseName}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {course.code} • {course.credits} credits
+                          {course.courseCode} • {course.credits} credits
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {course.schedule.day} {course.schedule.startTime} - {course.schedule.endTime}
+                          {course.schedule?.[0]?.dayOfWeek} {course.schedule?.[0]?.startTime} - {course.schedule?.[0]?.endTime}
                         </p>
                       </div>
                       <Badge variant="outline">
