@@ -11,7 +11,7 @@ dotenv.config();
  * Initializes database connection and starts the Express server
  */
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.PORT || '5000', 10);
 const HOST = process.env.HOST || 'localhost';
 
 // Connect to database

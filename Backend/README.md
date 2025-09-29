@@ -106,7 +106,7 @@ Create a `.env` file in the Backend directory:
 ```env
 # Server Configuration
 NODE_ENV=development
-PORT=3000
+PORT=5000
 HOST=localhost
 
 # Database
@@ -390,7 +390,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY dist ./dist
-EXPOSE 3000
+EXPOSE 5000
 CMD ["npm", "start"]
 ```
 
