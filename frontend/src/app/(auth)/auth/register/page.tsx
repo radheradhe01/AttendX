@@ -34,55 +34,14 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
     try {
-      // Send required fields for registration including role-specific data
+      // Send basic fields + minimal required fields to avoid backend validation errors
       const registrationData = {
         email: data.email,
         password: data.password,
         role: data.role,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: "1234567890", // Default phone number
-        ...(data.role === "student" && { 
-          studentId: data.studentId || "S001",
-          // Add required student fields with defaults
-          address: {
-            street: "123 Main St",
-            city: "City",
-            state: "State", 
-            zipCode: "12345",
-            country: "India"
-          },
-          emergencyContact: {
-            name: "Emergency Contact",
-            relationship: "Parent",
-            phone: "1234567890"
-          },
-          academicInfo: {
-            department: data.department || "Computer Science",
-            course: "B.Tech",
-            batch: "2024"
-          }
-        }),
-        ...(data.role === "faculty" && { 
-          facultyId: data.department || "F001",
-          // Add required faculty fields with defaults
-          address: {
-            street: "123 Main St",
-            city: "City", 
-            state: "State",
-            zipCode: "12345",
-            country: "India"
-          },
-          emergencyContact: {
-            name: "Emergency Contact",
-            relationship: "Spouse",
-            phone: "1234567890"
-          },
-          professionalInfo: {
-            department: data.department || "Computer Science",
-            designation: "Professor"
-          }
-        }),
+        firstName: data.firstName || "User",
+        lastName: data.lastName || "Name",
+        phone: "1234567890"
       }
       
       const response = await authApi.register(registrationData)
