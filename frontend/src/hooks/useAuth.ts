@@ -1,68 +1,75 @@
-import { useSession, signIn, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { toast } from "react-hot-toast"
+/**
+ * Authentication Hook
+ * Provides authentication state and methods for the frontend
+ */
+
+import { useSession, signIn, signOut } from 'next-auth/react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { tokenManager } from '@/lib/api';
 
 export function useAuth() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const isLoading = status === "loading"
-  const isAuthenticated = !!session
-  const user = session?.user
+  // Initialize token when session changes
+  useEffect(() => {
+    if (session?.accessToken) {
+      tokenManager.setToken(session.accessToken);
+    } else {
+      tokenManager.removeToken();
+    }
+  }, [session]);
 
   const login = async (email: string, password: string) => {
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
-      })
+      });
 
       if (result?.error) {
-        toast.error("Invalid credentials")
-        return false
+        throw new Error(result.error);
       }
 
-      toast.success("Login successful!")
-      return true
+      return { success: true };
     } catch (error) {
-      toast.error("Login failed")
-      return false
+      console.error('Login error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
     }
-  }
+  };
 
   const logout = async () => {
     try {
-      await signOut({ redirect: false })
-      toast.success("Logged out successfully")
-      router.push("/auth/login")
+      tokenManager.removeToken();
+      await signOut({ redirect: false });
+      return { success: true };
     } catch (error) {
-      toast.error("Logout failed")
+      console.error('Logout error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Logout failed' };
     }
-  }
+  };
 
-  const requireAuth = (redirectTo = "/auth/login") => {
-    if (!isLoading && !isAuthenticated) {
-      router.push(redirectTo)
-    }
-  }
-
-  const requireRole = (allowedRoles: string[], redirectTo = "/dashboard") => {
-    if (!isLoading && isAuthenticated && user?.role) {
-      if (!allowedRoles.includes(user.role)) {
-        router.push(redirectTo)
+  const requireAuth = (redirectTo: string = '/auth/login') => {
+    useEffect(() => {
+      if (status === 'unauthenticated') {
+        router.push(redirectTo);
       }
-    }
-  }
+    }, [status, redirectTo, router]);
+  };
+
+  const isAuthenticated = status === 'authenticated' && !!session?.accessToken;
+  const isLoading = status === 'loading';
+  const user = session?.user;
 
   return {
     user,
-    session,
-    isLoading,
     isAuthenticated,
+    isLoading,
     login,
     logout,
     requireAuth,
-    requireRole,
-  }
+    token: session?.accessToken,
+  };
 }

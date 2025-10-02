@@ -12,10 +12,15 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isLoading, requireAuth } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
-  requireAuth("/auth/login")
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/auth/login")
+    }
+  }, [isAuthenticated, isLoading, router])
 
   if (isLoading) {
     return <PageLoader message="Loading dashboard..." />

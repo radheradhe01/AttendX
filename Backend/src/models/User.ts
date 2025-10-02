@@ -60,8 +60,7 @@ const userSchema = new Schema<IUser>({
   toObject: { virtuals: true },
 });
 
-// Index for better query performance
-userSchema.index({ email: 1 });
+// Index for better query performance (email index is already created by unique: true)
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 

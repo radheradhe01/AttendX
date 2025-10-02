@@ -136,8 +136,7 @@ const courseSchema = new Schema<ICourse>({
   toObject: { virtuals: true },
 });
 
-// Indexes for better query performance
-courseSchema.index({ courseCode: 1 });
+// Indexes for better query performance (courseCode index is already created by unique: true)
 courseSchema.index({ department: 1 });
 courseSchema.index({ semester: 1, year: 1 });
 courseSchema.index({ faculty: 1 });

@@ -190,9 +190,7 @@ const facultySchema = new Schema<IFaculty>({
   toObject: { virtuals: true },
 });
 
-// Indexes for better query performance
-facultySchema.index({ facultyId: 1 });
-facultySchema.index({ 'professionalInfo.employeeId': 1 });
+// Indexes for better query performance (facultyId and employeeId indexes are already created by unique: true)
 facultySchema.index({ 'professionalInfo.department': 1 });
 facultySchema.index({ 'professionalInfo.designation': 1 });
 facultySchema.index({ assignedCourses: 1 });

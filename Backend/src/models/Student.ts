@@ -205,8 +205,7 @@ const studentSchema = new Schema<IStudent>({
   toObject: { virtuals: true },
 });
 
-// Indexes for better query performance
-studentSchema.index({ studentId: 1 });
+// Indexes for better query performance (studentId index is already created by unique: true)
 studentSchema.index({ rollNumber: 1 });
 studentSchema.index({ 'academicInfo.department': 1 });
 studentSchema.index({ 'academicInfo.course': 1 });
