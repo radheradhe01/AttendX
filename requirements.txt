@@ -1,0 +1,33 @@
+# Core FastAPI and web framework
+fastapi
+uvicorn[standard]
+pydantic[email]
+pydantic-settings
+
+# Database
+motor  # Async MongoDB driver
+pymongo
+beanie  # ODM for MongoDB
+
+# Authentication
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# Environment and configuration
+python-dotenv
+
+# Development and testing
+pytest
+pytest-asyncio
+httpx
+
+# Image processing and computer vision
+Pillow
+numpy
+opencv-python-headless
+face-recognition
+dlib
+
+# Additional utilities
+pathlib2
