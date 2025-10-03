@@ -1,0 +1,46 @@
+[
+  {
+    "id": "att_1",
+    "person_name": "sonakshi",
+    "timestamp": "2025-10-03T02:00:01.593423",
+    "face_verified": false,
+    "confidence_score": 0.15571802636011678,
+    "status": "absent",
+    "notes": "Test attendance",
+    "reference_image_path": "reference_images/sonakshi.jpg",
+    "attendance_image_path": "attendance_images/sonakshi_20251003_073001.jpg"
+  },
+  {
+    "id": "att_2",
+    "person_name": "suraj",
+    "timestamp": "2025-10-03T02:00:11.333340",
+    "face_verified": true,
+    "confidence_score": 0.42644563432797133,
+    "status": "present",
+    "notes": "Test attendance for suraj",
+    "reference_image_path": "reference_images/suraj.png",
+    "attendance_image_path": "attendance_images/suraj_20251003_073011.jpg"
+  },
+  {
+    "id": "att_3",
+    "person_name": "sonakshi",
+    "timestamp": "2025-10-03T02:00:30.373736",
+    "face_verified": true,
+    "confidence_score": 1.0,
+    "status": "present",
+    "notes": "string",
+    "reference_image_path": "reference_images/sonakshi.jpg",
+    "attendance_image_path": "attendance_images/sonakshi_20251003_073030.jpg"
+  },
+  {
+    "id": "att_4",
+    "person_name": "bhavesh.opportunity",
+    "timestamp": "2025-10-03T03:54:48.865195",
+    "face_verified": false,
+    "confidence_score": 0.0,
+    "status": "absent",
+    "notes": null,
+    "reference_image_path": "",
+    "attendance_image_path": "attendance_images/bhavesh.opportunity_20251003_092448.jpg"
+  }
+]
