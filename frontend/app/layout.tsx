@@ -1,15 +1,17 @@
 import type React from "react"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Dosis, Manrope } from "next/font/google"
 import "./globals.css"
 
-const geistSans = Geist({
+const dosis = Dosis({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-dosis",
+  weight: ["400", "500", "600", "700"],
 })
 
-const geistMono = Geist_Mono({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-geist-mono",
+  variable: "--font-manrope",
+  weight: ["400", "500", "600", "700"],
 })
 
 export const metadata = {
@@ -24,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="en" className={`${dosis.variable} ${manrope.variable}`}>
+      <body className="font-manrope antialiased">{children}</body>
     </html>
   )
 }

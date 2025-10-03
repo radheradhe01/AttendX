@@ -9,6 +9,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Suppress Socket.IO 404 errors in development
+  async rewrites() {
+    return [
+      {
+        source: '/socket.io/:path*',
+        destination: '/404',
+      },
+    ]
+  },
 }
 
 export default nextConfig

@@ -56,21 +56,74 @@ export function AttendanceModal({
     }
   }, [isOpen, step])
 
+  // Ensure video plays when stream is available
+  useEffect(() => {
+    if (stream && videoRef.current && step === "camera") {
+      videoRef.current.srcObject = stream
+      videoRef.current.play().catch(console.error)
+    }
+  }, [stream, step])
+
   // Start camera
   const startCamera = async () => {
     try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera access not supported in this browser")
+      }
+
+      // Request camera permission with more specific constraints
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+        video: { 
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
         audio: false,
       })
+      
       setStream(mediaStream)
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
+        
+        // Wait for video to load
+        videoRef.current.onloadedmetadata = () => {
+          console.log("Camera stream loaded successfully")
+          // Force play the video
+          videoRef.current?.play().catch(console.error)
+        }
+        
+        videoRef.current.oncanplay = () => {
+          console.log("Video can play")
+        }
+        
+        videoRef.current.onerror = (e) => {
+          console.error("Video element error:", e)
+          setErrorMessage("Camera stream failed to load")
+          setStep("error")
+        }
       }
+      
       setStep("camera")
     } catch (error) {
       console.error("Error accessing camera:", error)
-      setErrorMessage("Unable to access camera. Please check permissions.")
+      
+      let errorMessage = "Unable to access camera. "
+      
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          errorMessage += "Please allow camera permissions and try again."
+        } else if (error.name === "NotFoundError") {
+          errorMessage += "No camera found. Please connect a camera."
+        } else if (error.name === "NotSupportedError") {
+          errorMessage += "Camera access not supported. Please use HTTPS or localhost."
+        } else {
+          errorMessage += error.message
+        }
+      }
+      
+      setErrorMessage(errorMessage)
       setStep("error")
     }
   }
@@ -85,25 +138,55 @@ export function AttendanceModal({
 
   // Capture photo and mark attendance
   const capturePhoto = async () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
+    if (!videoRef.current || !canvasRef.current) {
+      setErrorMessage("Camera not ready. Please try again.")
+      setStep("error")
+      return
+    }
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+
+    // Check if video is ready
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      setErrorMessage("Camera not ready. Please wait for the video to load.")
+      setStep("error")
+      return
+    }
+
+    try {
+      // Set canvas dimensions to match video
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
+      
       const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.drawImage(video, 0, 0)
+      if (!ctx) {
+        throw new Error("Could not get canvas context")
       }
 
+      // Draw the video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
       // Convert canvas to blob
-      const blob = await new Promise<Blob>((resolve) => {
+      const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((blob) => {
-          if (blob) resolve(blob)
+          if (blob) {
+            console.log("Image captured successfully, size:", blob.size, "bytes")
+            resolve(blob)
+          } else {
+            reject(new Error("Failed to create image blob"))
+          }
         }, 'image/jpeg', 0.8)
       })
 
+      // Validate blob
+      if (blob.size === 0) {
+        throw new Error("Captured image is empty")
+      }
+
       // Create file from blob
       const file = new File([blob], 'attendance-photo.jpg', { type: 'image/jpeg' })
+      console.log("Created file:", file.name, "size:", file.size, "type:", file.type)
 
       // Start processing
       setStep("processing")
@@ -111,12 +194,14 @@ export function AttendanceModal({
 
       try {
         // Call the API to mark attendance
+        console.log("Sending attendance request for:", personName)
         const result = await AttendanceApi.markAttendance(
           personName,
           file,
           notes.trim() || undefined
         )
 
+        console.log("Attendance result:", result)
         setAttendanceResult(result)
         setStep("success")
         
@@ -135,6 +220,11 @@ export function AttendanceModal({
           onError(errorMsg)
         }
       }
+    } catch (error) {
+      console.error("Error capturing photo:", error)
+      const errorMsg = error instanceof Error ? error.message : "Failed to capture image"
+      setErrorMessage(errorMsg)
+      setStep("error")
     }
   }
 
@@ -194,10 +284,15 @@ export function AttendanceModal({
                 <p className="text-sm text-muted-foreground">
                   Next, we'll verify your identity using facial recognition.
                 </p>
-                <Button onClick={startCamera} className="w-full" disabled={!location}>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Start Camera
-                </Button>
+                <div className="space-y-2">
+                  <Button onClick={startCamera} className="w-full" disabled={!location}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Start Camera
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Make sure to allow camera permissions when prompted
+                  </p>
+                </div>
               </div>
             </>
           )}
@@ -206,21 +301,51 @@ export function AttendanceModal({
           {step === "camera" && (
             <>
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted
+                  className="w-full h-full object-cover" 
+                  style={{ transform: 'scaleX(-1)' }} // Mirror the video
+                />
                 <div className="absolute inset-0 border-2 border-primary/50 rounded-lg pointer-events-none">
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-64 border-2 border-primary rounded-lg" />
                 </div>
+                {!stream && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="text-center text-white">
+                      <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Loading camera...</p>
+                    </div>
+                  </div>
+                )}
+                {stream && videoRef.current && videoRef.current.videoWidth === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="text-center text-white">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                      <p className="text-sm">Initializing camera...</p>
+                    </div>
+                  </div>
+                )}
               </div>
               <canvas ref={canvasRef} className="hidden" />
 
-              <div className="flex gap-2">
-                <Button onClick={capturePhoto} className="flex-1">
-                  <Camera className="mr-2 h-4 w-4" />
-                  Capture & Mark Attendance
-                </Button>
-                <Button onClick={handleClose} variant="outline">
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button onClick={capturePhoto} className="flex-1" disabled={!stream}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Capture & Mark Attendance
+                  </Button>
+                  <Button onClick={handleClose} variant="outline">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {stream && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Camera is active. Click capture when ready.
+                  </p>
+                )}
               </div>
             </>
           )}
