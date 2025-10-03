@@ -9,14 +9,17 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Suppress Socket.IO 404 errors in development
+  // Only apply Socket.IO rewrite in development
   async rewrites() {
-    return [
-      {
-        source: '/socket.io/:path*',
-        destination: '/404',
-      },
-    ]
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/socket.io/:path*',
+          destination: '/404',
+        },
+      ]
+    }
+    return []
   },
 }
 
